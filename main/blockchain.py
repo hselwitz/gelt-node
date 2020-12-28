@@ -1,83 +1,86 @@
 import hashlib
 import json
 
-from gelt.main.models import Block, Transaction
-
-current_transactions = []
+from .models import Block, Transaction
 
 
-def new_block(proof: int, previous_hash: str = None) -> dict:
-    """
-    Create a new Block in the Blockchain
-    proof: The proof given by the Proof of Work algorithm
-    previous_hash: (Optional) Hash of previous Block
-    return: New Block
-    """
-    chain = Block.get_chain()
+class Blockchain():
+    def __init__(self, chain):
+        self.chain = chain
+        self.current_transactions = []
 
-    Block.objects.create(index=len(chain) + 1, transactions=current_transactions, proof=proof,
-                         previous_hash=previous_hash or create_hash(chain[-1]))
+    def new_block(self, proof: int, previous_hash: str = None) -> dict:
+        """
+        Create a new Block in the Blockchain
+        proof: The proof given by the Proof of Work algorithm
+        previous_hash: (Optional) Hash of previous Block
+        return: New Block
+        """
+        chain = Block.chain()
 
-    # Reset the current list of transactions
-    current_transactions = []
+        Block.objects.create(index=len(chain) + 1, transactions=self.current_transactions,
+                             proof=proof,
+                             previous_hash=previous_hash or self.create_hash(chain[-1]))
 
-    return Block.get_last_block()
+        # Reset the current list of transactions
+        current_transactions = []
 
+        return Block.get_last_block()
 
-def new_transaction(sender: str, recipient: str, amount: int) -> int:
-    """
-    Creates a new transaction to go into the next mined Block
-    sender: Address of the Sender
-    recipient: Address of the Recipient
-    amount: Amount
-    return:  The index of the Block that will hold this transaction
-    """
+    def new_transaction(self, sender: str, recipient: str, amount: int) -> int:
+        """
+        Creates a new transaction to go into the next mined Block
+        sender: Address of the Sender
+        recipient: Address of the Recipient
+        amount: Amount
+        return:  The index of the Block that will hold this transaction
+        """
 
-    current_transactions.append({
-        'sender': sender,
-        'recipient': recipient,
-        'amount': amount,
-    })
+        self.current_transactions.append({
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+        })
 
-    Transaction.objects.create(sender=sender, recipient=recipient, amount=amount)
+        Transaction.objects.create(sender=sender, recipient=recipient, amount=amount)
 
-    return Block.get_last_block()
+        return Block.get_last_block()
 
+    @staticmethod
+    def create_hash(block: dict) -> str:
+        """
+        Creates a SHA-256 hash of a Block
+        block: Block
+        return: Hash
+        """
 
-def create_hash(block: dict) -> str:
-    """
-    Creates a SHA-256 hash of a Block
-    block: Block
-    return: Hash
-    """
+        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
+        block_string = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
 
-    # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
-    block_string = json.dumps(block, sort_keys=True).encode()
-    return hashlib.sha256(block_string).hexdigest()
+    @staticmethod
+    def proof_of_work(self, last_proof: int) -> int:
+        """
+        Simple Proof of Work Algorithm:
+         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
+         - p is the previous proof, and p' is the new proof
+        """
 
+        proof = 0
+        while self.validate_proof(last_proof, proof) is False:
+            proof += 1
 
-def proof_of_work(last_proof: int) -> int:
-    """
-    Simple Proof of Work Algorithm:
-     - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
-     - p is the previous proof, and p' is the new proof
-    """
+        return proof
 
-    proof = 0
-    while validate_proof(last_proof, proof) is False:
-        proof += 1
+    @staticmethod
+    def validate_proof(last_proof: int, proof: int) -> bool:
+        """
+        Validates the Proof: Does hash(last_proof, proof) contain 4 leading zeroes?
+        last_proof: <int> Previous Proof
+        proof: Current Proof
+        return: True if correct, False if not.
+        """
 
-    return proof
-
-
-def validate_proof(last_proof: int, proof: int) -> bool:
-    """
-    Validates the Proof: Does hash(last_proof, proof) contain 4 leading zeroes?
-    :param last_proof: <int> Previous Proof
-    :param proof: <int> Current Proof
-    :return: <bool> True if correct, False if not.
-    """
-
-    guess = f'{last_proof}{proof}'.encode()
-    guess_hash = hashlib.sha256(guess).hexdigest()
-    return guess_hash[:4] == "0000"
+        guess = f'{last_proof}{proof}'.encode()
+        guess_hash = hashlib.sha256(guess).hexdigest()
+        return guess_hash[:4] == "0000"

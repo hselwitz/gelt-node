@@ -26,7 +26,7 @@ class Block(models.Model):
         return str(self.proof)
 
     @staticmethod
-    def get_chain():
+    def chain():
         return Block.objects.all()
 
     @staticmethod
