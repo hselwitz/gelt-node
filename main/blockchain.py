@@ -23,7 +23,7 @@ class Blockchain():
                              previous_hash=previous_hash or self.create_hash(chain[-1]))
 
         # Reset the current list of transactions
-        current_transactions = []
+        self.current_transactions = []
 
         return Block.get_last_block()
 
