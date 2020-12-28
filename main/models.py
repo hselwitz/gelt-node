@@ -13,17 +13,18 @@ class Block(models.Model):
 
     @staticmethod
     def chain():
-        return Block.objects.all()
+        return Block.objects.all().order_by('id')
 
     @staticmethod
     def get_last_block():
         # Returns the last block in the chain
-        return Block.objects.all().order_by('id')[-1]
+        return Block.objects.all().order_by('-id')[0]
 
 
 class Transaction(models.Model):
     sender = models.CharField(max_length=255)
     recipient = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
     amount = models.IntegerField()
 
     def __str__(self):
@@ -38,3 +39,6 @@ class Transaction(models.Model):
 class Node(models.Model):
     url = models.CharField(max_length=255)
     date_registered = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.url)

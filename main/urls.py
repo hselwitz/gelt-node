@@ -4,7 +4,7 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    # path('mine/', views.Mine.as_view()),
-    # path('transactions/new/', views.NewTransaction.as_view()),
+    path('mine/', views.mine, name='index'),
+    path('transactions/new/', views.new_transaction, name='new_transaction'),
     path('chain/', views.Chain.as_view()),
 ]

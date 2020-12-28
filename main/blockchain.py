@@ -5,8 +5,8 @@ from .models import Block, Transaction
 
 
 class Blockchain():
-    def __init__(self, chain):
-        self.chain = chain
+    def __init__(self):
+        self.chain = Block.chain()
         self.current_transactions = []
 
     def new_block(self, proof: int, previous_hash: str = None) -> dict:
@@ -46,41 +46,41 @@ class Blockchain():
 
         return Block.get_last_block()
 
-    @staticmethod
-    def create_hash(block: dict) -> str:
-        """
-        Creates a SHA-256 hash of a Block
-        block: Block
-        return: Hash
-        """
 
-        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
-        block_string = json.dumps(block, sort_keys=True).encode()
-        return hashlib.sha256(block_string).hexdigest()
+def create_hash(block: dict) -> str:
+    """
+    Creates a SHA-256 hash of a Block
+    block: Block
+    return: Hash
+    """
 
-    @staticmethod
-    def proof_of_work(self, last_proof: int) -> int:
-        """
-        Simple Proof of Work Algorithm:
-         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
-         - p is the previous proof, and p' is the new proof
-        """
+    # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
+    block_string = json.dumps(block, sort_keys=True).encode()
+    return hashlib.sha256(block_string).hexdigest()
 
-        proof = 0
-        while self.validate_proof(last_proof, proof) is False:
-            proof += 1
 
-        return proof
+def proof_of_work(last_proof: int) -> int:
+    """
+    Simple Proof of Work Algorithm:
+     - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
+     - p is the previous proof, and p' is the new proof
+    """
 
-    @staticmethod
-    def validate_proof(last_proof: int, proof: int) -> bool:
-        """
-        Validates the Proof: Does hash(last_proof, proof) contain 4 leading zeroes?
-        last_proof: <int> Previous Proof
-        proof: Current Proof
-        return: True if correct, False if not.
-        """
+    proof = 0
+    while validate_proof(last_proof, proof) is False:
+        proof += 1
 
-        guess = f'{last_proof}{proof}'.encode()
-        guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:4] == "0000"
+    return proof
+
+
+def validate_proof(last_proof: int, proof: int) -> bool:
+    """
+    Validates the Proof: Does hash(last_proof, proof) contain 4 leading zeroes?
+    last_proof: <int> Previous Proof
+    proof: Current Proof
+    return: True if correct, False if not.
+    """
+
+    guess = f'{last_proof}{proof}'.encode()
+    guess_hash = hashlib.sha256(guess).hexdigest()
+    return guess_hash[:4] == "0000"
