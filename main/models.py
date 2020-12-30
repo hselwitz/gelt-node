@@ -26,14 +26,21 @@ class Transaction(models.Model):
     recipient = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
     amount = models.IntegerField()
+    previous_hash = models.CharField(max_length=255)
+    validated = models.BooleanField(default=False)
 
     def __str__(self):
-        return str(self.sender) + " to " + str(self.recipient) + " for " + str(self.amount)
+        return self.previous_hash
 
     @staticmethod
-    def get_last_transaction(self):
+    def get_last_transaction():
         # Returns the last transaction in the chain
-        return self.objects.all().order_by('id')[-1]
+        return Transaction.objects.all().order_by('-id')[0]
+
+    @staticmethod
+    def get_unvalidated_transactions():
+        # Returns the last transaction in the chain
+        return Transaction.objects.filter(validated=False).values_list('previous_hash')
 
 
 class Node(models.Model):

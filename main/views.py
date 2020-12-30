@@ -1,11 +1,10 @@
-from django.core import serializers
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.decorators import api_view
 
-from .blockchain import Blockchain, proof_of_work, create_hash
-from .models import Block, Transaction
+from .blockchain import create_new_block, create_new_transaction, proof_of_work
+from .models import Block
 from .serializers import ChainSerializer
 
 NODE_ID = '403c839596bd42cca49c10a71d88bec8'
@@ -30,20 +29,17 @@ def mine(request):
 
         # Reward for finding the proof
         # The sender is "0" to signify that this node has mined a new coin
-        Transaction.objects.create(sender="0", recipient=NODE_ID, amount=1)
+        create_new_transaction(sender="Gelt", recipient=NODE_ID, amount=1)
 
-        # # Forge the new Block by adding it to the chain
-        serialized_block = serializers.serialize('json', [last_block])
-        previous_hash = create_hash(serialized_block)
-        block = Block.objects.create(index=last_block.index + 1, transactions="", proof=proof,
-                                     previous_hash=previous_hash)
+        # Forge the new block by adding it to the chain
+        new_block = create_new_block(proof)
 
         response = {
-            "message": "New Block Forged",
-            "index": block.index,
-            "transactions": block.transactions,
-            "proof": block.proof,
-            "previous_hash": block.previous_hash,
+            "message": "New block forged",
+            "index": new_block.index,
+            "transactions": new_block.transactions,
+            "proof": new_block.proof,
+            "previous_hash": new_block.previous_hash,
         }
 
         return JsonResponse(response)
@@ -51,16 +47,15 @@ def mine(request):
 
 @api_view(['POST'])
 def new_transaction(request):
-    values = request.get_json()
+    values = request.POST
 
     required = ["sender", "recipient", "amount"]
     if not all(k in values for k in required):
         return JsonResponse("Missing values", 400)
 
-    bc = Blockchain()
-    bc.new_transaction(values["sender"], values["recipient"], values["amount"])
+    create_new_transaction(values["sender"], values["recipient"], values["amount"])
 
-    new_index = Block.get_last_block()['index']
+    new_index = Block.get_last_block().index + 1
     response = {"message": f"Transaction will be added to Block {new_index}"}
 
     return JsonResponse(response)

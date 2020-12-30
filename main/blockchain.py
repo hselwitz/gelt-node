@@ -1,62 +1,48 @@
 import hashlib
 import json
 
+from django.core import serializers
+
 from .models import Block, Transaction
 
 
-class Blockchain():
-    def __init__(self):
-        self.chain = Block.chain()
-        self.current_transactions = []
+def create_hash(*args: dict) -> str:
+    item_string = ""
+    for i in args:
+        item_string += json.dumps(i, sort_keys=True)
 
-    def new_block(self, proof: int, previous_hash: str = None) -> dict:
-        """
-        Create a new Block in the Blockchain
-        proof: The proof given by the Proof of Work algorithm
-        previous_hash: (Optional) Hash of previous Block
-        return: New Block
-        """
-        chain = Block.chain()
+    item_string = item_string.encode()
 
-        Block.objects.create(index=len(chain) + 1, transactions=self.current_transactions,
-                             proof=proof,
-                             previous_hash=previous_hash or self.create_hash(chain[-1]))
-
-        # Reset the current list of transactions
-        self.current_transactions = []
-
-        return Block.get_last_block()
-
-    def new_transaction(self, sender: str, recipient: str, amount: int) -> int:
-        """
-        Creates a new transaction to go into the next mined Block
-        sender: Address of the Sender
-        recipient: Address of the Recipient
-        amount: Amount
-        return:  The index of the Block that will hold this transaction
-        """
-
-        self.current_transactions.append({
-            'sender': sender,
-            'recipient': recipient,
-            'amount': amount,
-        })
-
-        Transaction.objects.create(sender=sender, recipient=recipient, amount=amount)
-
-        return Block.get_last_block()
+    return hashlib.sha256(item_string).hexdigest()
 
 
-def create_hash(block: dict) -> str:
-    """
-    Creates a SHA-256 hash of a Block
-    block: Block
-    return: Hash
-    """
+def create_new_block(proof: int):
+    last_block = Block.get_last_block()
+    serialized_block = serializers.serialize('json', [last_block])
+    previous_hash = create_hash(serialized_block)
 
-    # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
-    block_string = json.dumps(block, sort_keys=True).encode()
-    return hashlib.sha256(block_string).hexdigest()
+    unvalidated_transactions = Transaction.get_unvalidated_transactions()
+
+    transactions_to_validate = []
+    for t in unvalidated_transactions:
+        transactions_to_validate.append(t[0])
+
+    block = Block.objects.create(index=last_block.index + 1, transactions=transactions_to_validate,
+                                 proof=proof,
+                                 previous_hash=previous_hash)
+
+    unvalidated_transactions.update(validated=True)
+
+    return block
+
+
+def create_new_transaction(sender: str, recipient: str, amount: int) -> None:
+    last_transaction = Transaction.get_last_transaction()
+    serialized_transaction = serializers.serialize('json', [last_transaction])
+    previous_hash = create_hash(serialized_transaction)
+
+    Transaction.objects.create(sender=sender, recipient=recipient, previous_hash=previous_hash,
+                               amount=amount)
 
 
 def proof_of_work(last_proof: int) -> int:
@@ -84,3 +70,7 @@ def validate_proof(last_proof: int, proof: int) -> bool:
     guess = f'{last_proof}{proof}'.encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
     return guess_hash[:4] == "0000"
+
+
+def validate_transaction():
+    pass
