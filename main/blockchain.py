@@ -1,9 +1,11 @@
 import hashlib
 import json
+from urllib.parse import urlparse
 
+import requests
 from django.core import serializers
 
-from .models import Block, Transaction
+from .models import Block, Transaction, Node
 
 
 def create_hash(*args: dict) -> str:
@@ -16,7 +18,7 @@ def create_hash(*args: dict) -> str:
     return hashlib.sha256(item_string).hexdigest()
 
 
-def create_new_block(proof: int):
+def create_new_block(proof: int) -> Block:
     last_block = Block.get_last_block()
     serialized_block = serializers.serialize("json", [last_block])
     previous_hash = create_hash(serialized_block)
@@ -39,14 +41,16 @@ def create_new_block(proof: int):
     return block
 
 
-def create_new_transaction(sender: str, recipient: str, amount: int) -> None:
+def create_new_transaction(sender: str, recipient: str, amount: int) -> Transaction:
     last_transaction = Transaction.get_last_transaction()
     serialized_transaction = serializers.serialize("json", [last_transaction])
-    previous_hash = create_hash(serialized_transaction)
+    hash = create_hash(serialized_transaction)
 
-    Transaction.objects.create(
-        sender=sender, recipient=recipient, previous_hash=previous_hash, amount=amount
+    new_transaction = Transaction.objects.create(
+        sender=sender, recipient=recipient, hash=hash, amount=amount
     )
+
+    return new_transaction
 
 
 def proof_of_work(last_proof: int) -> int:
@@ -78,3 +82,64 @@ def validate_proof(last_proof: int, proof: int) -> bool:
 
 def validate_transaction():
     pass
+
+
+def register_node(address: str) -> None:
+    Node.objects.create(url=urlparse(address).netloc)
+
+
+def validate_blockchain(blockchain: list) -> bool:
+    last_block = blockchain[0]
+    current_index = 1
+
+    while current_index < len(blockchain):
+        block = blockchain[current_index]
+        print(f'{last_block}')
+        print(f'{block}')
+        print("\n-----------\n")
+        # Check that the hash of the block is correct
+        if block['previous_hash'] != create_hash(last_block):
+            return False
+
+        # Check that the Proof of Work is correct
+        if not validate_proof(last_block['proof'], block['proof']):
+            return False
+
+        last_block = block
+        current_index += 1
+
+    return True
+
+
+def resolve_conflicts(self) -> bool:
+    """
+    This is our Consensus Algorithm, it resolves conflicts
+    by replacing our chain with the longest one in the network.
+    :return: <bool> True if our chain was replaced, False if not
+    """
+
+    neighbours = self.nodes
+    new_chain = None
+
+    # We're only looking for chains longer than ours
+    max_length = len(self.chain)
+
+    # Grab and verify the chains from all the nodes in our network
+    for node in neighbours:
+        response = requests.get(f'http://{node}/chain')
+
+        if response.status_code == 200:
+            length = response.json()['length']
+            chain = response.json()['chain']
+
+            # Check if the length is longer and the chain is valid
+            if length > max_length and validate_blockchain(chain):
+                max_length = length
+                new_chain = chain
+
+    # Replace our chain if we discovered a new, valid chain longer than ours
+    if new_chain:
+        self.chain = new_chain
+        return True
+
+    return False

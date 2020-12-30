@@ -7,7 +7,8 @@ from .blockchain import create_new_block, create_new_transaction, proof_of_work
 from .models import Block
 from .serializers import ChainSerializer
 
-NODE_ID = "403c839596bd42cca49c10a71d88bec8"
+NODE_PUBLIC_KEY = "403c839596bd42cca49c10a71d88bec8"
+NODE_PRIVATE_KEY = "88b9b2f986eb4850ab38ccbf507023e2"
 
 
 def index(request):
@@ -28,8 +29,8 @@ def mine(request):
         proof = proof_of_work(last_proof)
 
         # Reward for finding the proof
-        # The sender is "0" to signify that this node has mined a new coin
-        create_new_transaction(sender="Gelt", recipient=NODE_ID, amount=1)
+        # The sender is "Gelt" to signify that this node has mined a new coin
+        create_new_transaction(sender="Gelt", recipient=NODE_PUBLIC_KEY, amount=1)
 
         # Forge the new block by adding it to the chain
         new_block = create_new_block(proof)
