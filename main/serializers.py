@@ -5,4 +5,4 @@ from .models import Block
 class ChainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Block
-        fields = ['index', 'timestamp', 'transactions', 'proof', 'previous_hash']
+        fields = ["index", "timestamp", "transactions", "proof", "previous_hash"]

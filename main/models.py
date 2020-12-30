@@ -13,12 +13,12 @@ class Block(models.Model):
 
     @staticmethod
     def chain():
-        return Block.objects.all().order_by('id')
+        return Block.objects.all().order_by("id")
 
     @staticmethod
     def get_last_block():
         # Returns the last block in the chain
-        return Block.objects.all().order_by('-id')[0]
+        return Block.objects.all().order_by("-id")[0]
 
 
 class Transaction(models.Model):
@@ -35,12 +35,12 @@ class Transaction(models.Model):
     @staticmethod
     def get_last_transaction():
         # Returns the last transaction in the chain
-        return Transaction.objects.all().order_by('-id')[0]
+        return Transaction.objects.all().order_by("-id")[0]
 
     @staticmethod
     def get_unvalidated_transactions():
         # Returns the last transaction in the chain
-        return Transaction.objects.filter(validated=False).values_list('previous_hash')
+        return Transaction.objects.filter(validated=False).values_list("previous_hash")
 
 
 class Node(models.Model):

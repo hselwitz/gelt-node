@@ -18,7 +18,7 @@ def create_hash(*args: dict) -> str:
 
 def create_new_block(proof: int):
     last_block = Block.get_last_block()
-    serialized_block = serializers.serialize('json', [last_block])
+    serialized_block = serializers.serialize("json", [last_block])
     previous_hash = create_hash(serialized_block)
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
@@ -27,9 +27,12 @@ def create_new_block(proof: int):
     for t in unvalidated_transactions:
         transactions_to_validate.append(t[0])
 
-    block = Block.objects.create(index=last_block.index + 1, transactions=transactions_to_validate,
-                                 proof=proof,
-                                 previous_hash=previous_hash)
+    block = Block.objects.create(
+        index=last_block.index + 1,
+        transactions=transactions_to_validate,
+        proof=proof,
+        previous_hash=previous_hash,
+    )
 
     unvalidated_transactions.update(validated=True)
 
@@ -38,11 +41,12 @@ def create_new_block(proof: int):
 
 def create_new_transaction(sender: str, recipient: str, amount: int) -> None:
     last_transaction = Transaction.get_last_transaction()
-    serialized_transaction = serializers.serialize('json', [last_transaction])
+    serialized_transaction = serializers.serialize("json", [last_transaction])
     previous_hash = create_hash(serialized_transaction)
 
-    Transaction.objects.create(sender=sender, recipient=recipient, previous_hash=previous_hash,
-                               amount=amount)
+    Transaction.objects.create(
+        sender=sender, recipient=recipient, previous_hash=previous_hash, amount=amount
+    )
 
 
 def proof_of_work(last_proof: int) -> int:
@@ -67,9 +71,9 @@ def validate_proof(last_proof: int, proof: int) -> bool:
     return: True if correct, False if not.
     """
 
-    guess = f'{last_proof}{proof}'.encode()
+    guess = f"{last_proof}{proof}".encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
-    return guess_hash[:4] == "0000"
+    return guess_hash[:1] == "0"
 
 
 def validate_transaction():

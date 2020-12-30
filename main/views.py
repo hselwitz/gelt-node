@@ -7,11 +7,11 @@ from .blockchain import create_new_block, create_new_transaction, proof_of_work
 from .models import Block
 from .serializers import ChainSerializer
 
-NODE_ID = '403c839596bd42cca49c10a71d88bec8'
+NODE_ID = "403c839596bd42cca49c10a71d88bec8"
 
 
 def index(request):
-    return render(request, 'main/index.html')
+    return render(request, "main/index.html")
 
 
 class Chain(generics.ListCreateAPIView):
@@ -19,9 +19,9 @@ class Chain(generics.ListCreateAPIView):
     serializer_class = ChainSerializer
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def mine(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         # Run the proof of work algorithm to get the next proof
         last_block = Block.get_last_block()
         last_proof = last_block.proof
@@ -45,7 +45,7 @@ def mine(request):
         return JsonResponse(response)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def new_transaction(request):
     values = request.POST
 
