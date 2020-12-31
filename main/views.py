@@ -60,10 +60,12 @@ def new_transaction(request):
     if not all(k in values for k in required):
         return JsonResponse("Missing values", 400)
 
-    create_new_transaction(values["sender"], values["recipient"], values["amount"],
-                           values["signature"])
+    create_new_transaction(
+        values["sender"], values["recipient"], values["amount"], values["signature"]
+    )
 
     new_index = Block.get_last_block().index + 1
     response = {"message": f"Transaction will be added to Block {new_index}"}
 
     return JsonResponse(response)
+    # TODO: include public keys

@@ -22,8 +22,10 @@ class Block(models.Model):
 
 
 class Transaction(models.Model):
-    sender = models.TextField()
-    recipient = models.CharField(max_length=255)
+    sender_name = models.CharField(max_length=255, blank=True)
+    sender_public_key = models.TextField()
+    recipient_name = models.CharField(max_length=255, blank=True)
+    recipient_public_key = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     amount = models.IntegerField()
     signature = models.CharField(max_length=255)

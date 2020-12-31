@@ -44,12 +44,15 @@ def create_new_block(proof: int) -> Block:
 
 
 def create_new_transaction(sender: str, recipient: str, amount: int, signature: str) -> Transaction:
-    transaction_details = {"sender": sender, "recipient": recipient, "amount": amount}
+    transaction_data = {"sender": sender, "recipient": recipient, "amount": amount}
 
-    new_transaction = Transaction.objects.create(sender=sender, recipient=recipient, amount=amount,
-                                                 signature=signature)
+    new_transaction = Transaction.objects.create(
+        sender=sender, recipient=recipient, amount=amount, signature=signature
+    )
 
     return new_transaction
+
+    # TODO: include public keys
 
 
 def validate_transaction(public_key: str, signature: str):
@@ -58,6 +61,8 @@ def validate_transaction(public_key: str, signature: str):
         verify(public_key, signature)
     except cryptography.exceptions.InvalidSignature:
         return "Invalid signature detected. Transaction denied."
+
+    # TODO: and is unique
 
 
 def proof_of_work(last_proof: int) -> int:
