@@ -4,11 +4,12 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 
 from .blockchain import create_new_block, create_new_transaction, proof_of_work
-from .models import Block
-from .serializers import ChainSerializer
+from .crypto import read_private_key, read_public_key
+from .models import Block, Transaction
+from .serializers import ChainSerializer, TransactionSerializer
 
-NODE_PUBLIC_KEY = "403c839596bd42cca49c10a71d88bec8"
-NODE_PRIVATE_KEY = "88b9b2f986eb4850ab38ccbf507023e2"
+NODE_PUBLIC_KEY = read_public_key()
+NODE_PRIVATE_KEY = read_private_key()
 
 
 def index(request):
@@ -18,6 +19,11 @@ def index(request):
 class Chain(generics.ListCreateAPIView):
     queryset = Block.objects.all()
     serializer_class = ChainSerializer
+
+
+class Transactions(generics.ListCreateAPIView):
+    queryset = Transaction.objects.all()
+    serializer_class = TransactionSerializer
 
 
 @api_view(["POST"])
@@ -50,11 +56,12 @@ def mine(request):
 def new_transaction(request):
     values = request.POST
 
-    required = ["sender", "recipient", "amount"]
+    required = ["sender", "recipient", "amount", "signature"]
     if not all(k in values for k in required):
         return JsonResponse("Missing values", 400)
 
-    create_new_transaction(values["sender"], values["recipient"], values["amount"])
+    create_new_transaction(values["sender"], values["recipient"], values["amount"],
+                           values["signature"])
 
     new_index = Block.get_last_block().index + 1
     response = {"message": f"Transaction will be added to Block {new_index}"}

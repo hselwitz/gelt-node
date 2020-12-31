@@ -22,15 +22,15 @@ class Block(models.Model):
 
 
 class Transaction(models.Model):
-    sender = models.CharField(max_length=255)
+    sender = models.TextField()
     recipient = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
     amount = models.IntegerField()
-    hash = models.CharField(max_length=255)
+    signature = models.CharField(max_length=255)
     validated = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.hash
+        return self.signature
 
     @staticmethod
     def get_last_transaction():
