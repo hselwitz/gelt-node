@@ -13,25 +13,25 @@ def generate_key_pair():
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    with open("private_key.pem", "wb") as f:
+    with open(r"main/private_key.pem", "wb") as f:
         f.write(pem_private)
 
     public_key = private_key.public_key()
     pem_public = public_key.public_bytes(
         encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
-    with open("public_key.pem", "wb") as f:
+    with open(r"main/public_key.pem", "wb") as f:
         f.write(pem_public)
 
 
 def read_public_key():
-    with open("public_key.pem", "rb") as key_file:
+    with open(r"main/public_key.pem", "rb") as key_file:
         public_key = serialization.load_pem_public_key(key_file.read(), backend=default_backend())
         return public_key
 
 
 def read_private_key():
-    with open("private_key.pem", "rb") as key_file:
+    with open(r"main/private_key.pem", "rb") as key_file:
         private_key = serialization.load_pem_private_key(
             key_file.read(), password=None, backend=default_backend()
         )
@@ -59,4 +59,3 @@ def verify(public_key, signature: str, message: dict):
     )
 
     return verified
-
