@@ -4,8 +4,9 @@ from urllib.parse import urlparse
 
 import cryptography
 from django.core import serializers
+from django.http import JsonResponse
 
-from main.crypto import verify
+from main.crypto import verify, str_sig_to_byes, deserialize_str_key
 from .models import Block, Transaction, Node
 
 
@@ -57,6 +58,10 @@ def create_new_transaction(
     transaction_data = {"sender_public_key": sender_public_key,
                         "recipient_public_key": recipient_public_key, "amount": amount}
 
+    print(transaction_data)
+
+    validate_transaction(sender_public_key, signature, transaction_data)
+
     new_transaction = Transaction.objects.create(
         sender_name=sender_name,
         sender_public_key=sender_public_key,
@@ -68,11 +73,13 @@ def create_new_transaction(
 
     return new_transaction
 
-    # TODO: validate
-
 
 def validate_transaction(public_key: str, signature: str, message: dict):
     """verify signature with public key"""
+
+    signature = str_sig_to_byes(signature)
+    public_key = deserialize_str_key(public_key)
+
     try:
         verify(public_key, signature, message)
     except cryptography.exceptions.InvalidSignature:

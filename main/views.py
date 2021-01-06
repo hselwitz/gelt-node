@@ -4,7 +4,7 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 
 from .blockchain import create_new_block, create_new_transaction, proof_of_work, SignatureError
-from .crypto import read_private_key, read_public_key
+from .crypto import read_private_key, read_public_key, serialize_public_key
 from .models import Block, Transaction
 from .serializers import ChainSerializer, TransactionSerializer
 
@@ -35,8 +35,10 @@ def mine(request):
         proof = proof_of_work(last_proof)
 
         # Reward
-        create_new_transaction(sender_name="Gelt", sender_public_key=NODE_PUBLIC_KEY,
-                               recipient_name='Gelt', recipient_public_key=NODE_PUBLIC_KEY,
+        create_new_transaction(sender_name="Gelt",
+                               sender_public_key=serialize_public_key(NODE_PUBLIC_KEY),
+                               recipient_name='Gelt',
+                               recipient_public_key=serialize_public_key(NODE_PUBLIC_KEY),
                                amount=1, signature="")
 
         # Forge new block by adding it to the chain
@@ -60,7 +62,7 @@ def new_transaction(request):
     required = ["sender_name", "sender_public_key", "recipient_name", "recipient_public_key",
                 "amount", "signature"]
     if not all(k in values for k in required):
-        return JsonResponse("Missing values", 400)
+        return JsonResponse("Missing values", safe=False)
 
     try:
         create_new_transaction(
@@ -68,7 +70,7 @@ def new_transaction(request):
             values["recipient_public_key"], values["amount"], values["signature"]
         )
     except SignatureError:
-        return JsonResponse("Invalid signature detected. Transaction denied.")
+        return JsonResponse("Invalid signature detected. Transaction denied.", safe=False)
 
     new_index = Block.get_last_block().index + 1
     response = {"message": f"Transaction will be added to Block {new_index}"}

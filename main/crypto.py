@@ -1,7 +1,10 @@
+import json
+from codecs import encode
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
-import json
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 
 def generate_key_pair():
@@ -36,6 +39,40 @@ def read_private_key():
             key_file.read(), password=None, backend=default_backend()
         )
     return private_key
+
+
+def serialize_public_key(key):
+    return key.public_bytes(
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
+def serialized_key_to_str(key: bytes) -> str:
+    key = repr(key)
+    key = key[29:]
+    key = key[:-29]
+    return key
+
+
+def deserialize_str_key(key: str):
+    start = "-----BEGIN PUBLIC KEY-----\\"
+    end = "\n-----END PUBLIC KEY-----\n"
+
+    reconstructed_key = start + key + end
+    reconstructed_key = encode(reconstructed_key.encode().decode('unicode_escape'),
+                               "raw_unicode_escape")
+
+    parameters = load_pem_public_key(reconstructed_key)
+
+    return parameters
+
+
+def bytes_sig_to_str(sig):
+    return repr(sig[:])
+
+
+def str_sig_to_byes(sig):
+    return encode(sig.encode().decode('unicode_escape')[2:-1], "raw_unicode_escape")
 
 
 def sign(private_key, message: dict):
