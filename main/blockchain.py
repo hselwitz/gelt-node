@@ -56,7 +56,7 @@ def create_new_transaction(
         signature: str,
 ) -> Transaction:
     transaction_data = {"sender_public_key": sender_public_key,
-                        "recipient_public_key": recipient_public_key, "amount": amount}
+                        "recipient_public_key": recipient_public_key, "amount": int(amount)}
 
     print(transaction_data)
 
