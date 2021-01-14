@@ -17,7 +17,7 @@ def index(request):
 
 
 class Chain(generics.ListCreateAPIView):
-    queryset = Block.objects.all()
+    queryset = reversed(Block.objects.all())
     serializer_class = ChainSerializer
 
 
@@ -35,11 +35,14 @@ def mine(request):
         proof = proof_of_work(last_proof)
 
         # Reward
-        create_new_transaction(sender_name="Gelt",
-                               sender_public_key=serialize_public_key(NODE_PUBLIC_KEY),
-                               recipient_name='Gelt',
-                               recipient_public_key=serialize_public_key(NODE_PUBLIC_KEY),
-                               amount=1, signature="")
+        create_new_transaction(
+            sender_name="Gelt",
+            sender_public_key=serialize_public_key(NODE_PUBLIC_KEY),
+            recipient_name="Gelt",
+            recipient_public_key=serialize_public_key(NODE_PUBLIC_KEY),
+            amount=1,
+            signature="",
+        )
 
         # Forge new block by adding it to the chain
         new_block = create_new_block(proof)
@@ -59,15 +62,25 @@ def mine(request):
 def new_transaction(request):
     values = request.POST
 
-    required = ["sender_name", "sender_public_key", "recipient_name", "recipient_public_key",
-                "amount", "signature"]
+    required = [
+        "sender_name",
+        "sender_public_key",
+        "recipient_name",
+        "recipient_public_key",
+        "amount",
+        "signature",
+    ]
     if not all(k in values for k in required):
         return JsonResponse("Missing values", safe=False)
 
     try:
         create_new_transaction(
-            values["sender_name"], values["sender_public_key"], values["recipient_name"],
-            values["recipient_public_key"], values["amount"], values["signature"]
+            values["sender_name"],
+            values["sender_public_key"],
+            values["recipient_name"],
+            values["recipient_public_key"],
+            values["amount"],
+            values["signature"],
         )
     except SignatureError:
         return JsonResponse("Invalid signature detected. Transaction denied.", safe=False)

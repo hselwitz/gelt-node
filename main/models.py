@@ -13,7 +13,7 @@ class Block(models.Model):
 
     @staticmethod
     def chain():
-        return Block.objects.all().order_by("id")
+        return Block.objects.all().order_by("-id")
 
     @staticmethod
     def get_last_block():

@@ -28,6 +28,7 @@ def create_new_block(proof: int) -> Block:
     last_block = Block.get_last_block()
     serialized_block = serializers.serialize("json", [last_block])
     previous_hash = create_hash(serialized_block)
+    # TODO: create hash from dict object
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
 
@@ -55,8 +56,11 @@ def create_new_transaction(
         amount: int,
         signature: str,
 ) -> Transaction:
-    transaction_data = {"sender_public_key": sender_public_key,
-                        "recipient_public_key": recipient_public_key, "amount": int(amount)}
+    transaction_data = {
+        "sender_public_key": sender_public_key,
+        "recipient_public_key": recipient_public_key,
+        "amount": int(amount),
+    }
 
     print(transaction_data)
 
@@ -108,8 +112,53 @@ def register_node(address: str) -> None:
     Node.objects.create(url=urlparse(address).netloc)
 
 
-def validate_blockchain() -> bool:
-    pass
+shain = [
+    {
+        "index": 29,
+        "timestamp": "2021-01-06T07:13:48.635044Z",
+        "transactions": "",
+        "proof": 161606,
+        "previous_hash": "01f4d41dafe08a9209588bea8df4e470bdfc7269bde4dc48dde69e79c6ea5cc6"
+    },
+    {
+        "index": 28,
+        "timestamp": "2021-01-06T06:54:40.265904Z",
+        "transactions": "",
+        "proof": 98615,
+        "previous_hash": "629d36dca05b9f4827ee438f77eb8f4791ff53f813bba4a6d89b76105c5fdf93"
+    },
+    {
+        "index": 27,
+        "timestamp": "2021-01-06T06:53:43.365587Z",
+        "transactions": "",
+        "proof": 30034,
+        "previous_hash": "95b16cebcaf69478d23b065fa20c71f4687d0bdd77cad9540217bca8a6ff3bb3"
+    },
+    {
+        "index": 26,
+        "timestamp": "2021-01-06T06:03:41.328301Z",
+        "transactions": "",
+        "proof": 159963,
+        "previous_hash": "d0f590f980e2377d20776bd60704b8ebe634a0d8f2f8bd37bdbd6187c006f6cd"
+    },
+]
+
+
+def validate_blockchain(blockchain) -> bool:
+    for b in range(0, len(blockchain) - 1):
+        # validate proofs
+        if not validate_proof(blockchain[b + 1].proof, blockchain[b].proof):
+            return False
+
+        # validate hashes
+        if blockchain[b]['previous_hash'] != create_hash(blockchain[b + 1]):
+            return False
+
+        # print(blockchain[b]['previous_hash'] == create_hash(blockchain[b + 1]))
+        # print(blockchain[b]['previous_hash'])
+        # print(create_hash(blockchain[b + 1]))
+
+    return True
 
 
 def resolve_conflicts() -> bool:
