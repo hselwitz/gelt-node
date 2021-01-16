@@ -3,13 +3,25 @@ from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.decorators import api_view
 
-from .blockchain import create_new_block, create_new_transaction, proof_of_work, SignatureError
-from .crypto import read_private_key, read_public_key, serialize_public_key
+from .blockchain import (
+    create_new_block,
+    create_new_transaction,
+    proof_of_work,
+    sign_transaction,
+    SignatureError,
+)
+from .crypto import (
+    read_private_key,
+    read_public_key,
+    serialize_public_key,
+    key_to_str,
+)
 from .models import Block, Transaction
 from .serializers import ChainSerializer, TransactionSerializer
 
 NODE_PUBLIC_KEY = read_public_key()
 NODE_PRIVATE_KEY = read_private_key()
+NODE_NAME = "H"
 
 
 def index(request):
@@ -34,14 +46,18 @@ def mine(request):
         last_proof = last_block.proof
         proof = proof_of_work(last_proof)
 
+        signature = sign_transaction(
+            key_to_str(NODE_PUBLIC_KEY), key_to_str(NODE_PUBLIC_KEY), 1, NODE_PRIVATE_KEY,
+        )
+
         # Reward
         create_new_transaction(
             sender_name="Gelt",
-            sender_public_key=serialize_public_key(NODE_PUBLIC_KEY),
-            recipient_name="Gelt",
-            recipient_public_key=serialize_public_key(NODE_PUBLIC_KEY),
+            sender_public_key=key_to_str(NODE_PUBLIC_KEY),
+            recipient_name=NODE_NAME,
+            recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
             amount=1,
-            signature="",
+            signature=signature,
         )
 
         # Forge new block by adding it to the chain

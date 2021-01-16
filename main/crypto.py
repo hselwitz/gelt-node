@@ -59,12 +59,19 @@ def deserialize_str_key(key: str):
 
     reconstructed_key = start + key + end
     reconstructed_key = encode(
-        reconstructed_key.encode().decode("unicode_escape"), "raw_unicode_escape"
+        reconstructed_key.encode().decode("unicode_escape"), "raw_unicode_escape",
     )
 
     parameters = load_pem_public_key(reconstructed_key)
 
     return parameters
+
+
+def key_to_str(key) -> str:
+    key = serialize_public_key(key)
+    key = serialized_key_to_str(key)
+
+    return key
 
 
 def bytes_sig_to_str(sig):
@@ -79,7 +86,7 @@ def sign(private_key, message: dict):
     message = json.dumps(message).encode("utf-8")
     signature = private_key.sign(
         message,
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH,),
         hashes.SHA256(),
     )
 
@@ -91,7 +98,7 @@ def verify(public_key, signature: str, message: dict):
     verified = public_key.verify(
         signature,
         message,
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH,),
         hashes.SHA256(),
     )
 
