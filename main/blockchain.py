@@ -154,6 +154,10 @@ def validate_blockchain(blockchain: list) -> bool:
     return True
 
 
+def propagate_nodes():
+    pass
+
+
 def download_blockchains() -> list:
     blockchains = []
     nodes = Node.get_unique_nodes()
@@ -175,7 +179,7 @@ def resolve_conflicts() -> None:
         try:
             validate_blockchain(longest_bc)
         except BlockchainError:
-            raise BlockchainError("Invalid blockchain on Node _")
+            raise BlockchainError("Invalid blockchain on node _")
 
         Block.objects.all().delete()
 
