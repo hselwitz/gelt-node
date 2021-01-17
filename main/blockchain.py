@@ -1,8 +1,8 @@
 import hashlib
 import json
-from urllib.parse import urlparse
 
 import cryptography
+import requests
 from django.core import serializers
 from django.forms.models import model_to_dict
 
@@ -20,6 +20,10 @@ class SignatureError(Exception):
     pass
 
 
+class BlockchainError(Exception):
+    pass
+
+
 def create_hash(*args: dict) -> str:
     item_string = ""
     for i in args:
@@ -32,8 +36,8 @@ def create_hash(*args: dict) -> str:
 
 def create_new_block(proof: int) -> Block:
     last_block = model_to_dict(Block.get_last_block())
-    # serialized_block = serializers.serialize("json", [last_block])
-    # block_dict = json.loads(serialized_block)
+    serialized_block = serializers.serialize("json", [last_block])
+    block_dict = json.loads(serialized_block)
     previous_hash = create_hash(last_block)
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
@@ -84,7 +88,9 @@ def create_new_transaction(
     return new_transaction
 
 
-def sign_transaction(sender_public_key, recipient_public_key, amount, private_key):
+def sign_transaction(
+    sender_public_key: str, recipient_public_key: str, amount: int, private_key
+) -> str:
     transaction_data = {
         "sender_public_key": sender_public_key,
         "recipient_public_key": recipient_public_key,
@@ -125,8 +131,9 @@ def validate_proof(last_proof: int, proof: int) -> bool:
     return guess_hash[:4] == "0000"
 
 
-def register_node(address: str) -> None:
-    Node.objects.create(url=urlparse(address).netloc)
+def register_node(node_address: str, url_to_register: str) -> None:
+    headers = {"Referer": url_to_register}
+    requests.post(node_address, headers=headers)
 
 
 def export_blockchain() -> list:
@@ -135,21 +142,41 @@ def export_blockchain() -> list:
     return bc
 
 
-def validate_blockchain(blockchain) -> bool:
+def validate_blockchain(blockchain: list) -> bool:
     for b in range(0, len(blockchain) - 1):
         # validate proofs
         if not validate_proof(blockchain[b + 1]["proof"], blockchain[b]["proof"]):
-            return False
+            raise BlockchainError("Invalid proof")
         # validate hashes
         if blockchain[b]["previous_hash"] != create_hash(blockchain[b + 1]):
-            return False
-
-        print(blockchain[b]["previous_hash"] == create_hash(blockchain[b + 1]))
-        print(blockchain[b]["previous_hash"])
-        print(create_hash(blockchain[b + 1]))
+            raise BlockchainError("Invalid hash")
 
     return True
 
 
-def resolve_conflicts() -> bool:
-    pass
+def download_blockchains() -> list:
+    blockchains = []
+    nodes = Node.get_unique_nodes()
+    for node in nodes:
+        r = requests.get(node + "/chain/")
+        blockchains.append(r)
+
+    return blockchains
+
+
+def resolve_conflicts() -> None:
+    # loop through list of node's chain endpoints, validate, replace if longer than local chain
+    local_chain_length = Block.objects.count()
+    blockchains = download_blockchains()
+    longest_bc = max(blockchains, key=len)
+    longest_bc_length = len(longest_bc)
+
+    if longest_bc_length > local_chain_length:
+        try:
+            validate_blockchain(longest_bc)
+        except BlockchainError:
+            raise BlockchainError("Invalid blockchain on Node _")
+
+        Block.objects.all().delete()
+
+        # TODO upload new blockchain to Block model

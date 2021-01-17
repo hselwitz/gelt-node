@@ -50,5 +50,7 @@ class Node(models.Model):
         return str(self.url)
 
     @staticmethod
-    def get_set_of_nodes():
-        return set(Node.objects.all())
+    def get_unique_nodes() -> list:
+        nodes = []
+        [nodes.append(node.url) for node in Node.objects.all() if node not in nodes]
+        return nodes

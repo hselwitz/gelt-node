@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import generics
@@ -13,10 +15,9 @@ from .blockchain import (
 from .crypto import (
     read_private_key,
     read_public_key,
-    serialize_public_key,
     key_to_str,
 )
-from .models import Block, Transaction
+from .models import Block, Transaction, Node
 from .serializers import ChainSerializer, TransactionSerializer
 
 NODE_PUBLIC_KEY = read_public_key()
@@ -29,13 +30,21 @@ def index(request):
 
 
 class Chain(generics.ListCreateAPIView):
-    queryset = reversed(Block.objects.all())
+    queryset = Block.objects.all()
     serializer_class = ChainSerializer
 
 
 class Transactions(generics.ListCreateAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
+
+
+@api_view(["POST"])
+def register_node(request):
+    address = request
+    # TODO get url to register from request headers
+    Node.objects.create(url=urlparse(address).netloc)
+    return JsonResponse("Registered node at " + address, safe=False)
 
 
 @api_view(["POST"])
@@ -60,7 +69,6 @@ def mine(request):
             signature=signature,
         )
 
-        # Forge new block by adding it to the chain
         new_block = create_new_block(proof)
 
         response = {
