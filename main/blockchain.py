@@ -3,12 +3,11 @@ import json
 
 import cryptography
 import requests
-from django.core import serializers
 from django.forms.models import model_to_dict
 
 from main.crypto import (
     verify,
-    str_sig_to_byes,
+    str_sig_to_bytes,
     deserialize_str_key,
     bytes_sig_to_str,
     sign,
@@ -25,6 +24,8 @@ class BlockchainError(Exception):
 
 
 def create_hash(*args: dict) -> str:
+    """function to hash transaction data"""
+
     item_string = ""
     for i in args:
         item_string += json.dumps(i, sort_keys=True)
@@ -36,8 +37,6 @@ def create_hash(*args: dict) -> str:
 
 def create_new_block(proof: int) -> Block:
     last_block = model_to_dict(Block.get_last_block())
-    serialized_block = serializers.serialize("json", [last_block])
-    block_dict = json.loads(serialized_block)
     previous_hash = create_hash(last_block)
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
@@ -104,7 +103,7 @@ def sign_transaction(
 def validate_transaction(public_key: str, signature: str, message: dict):
     """verify signature with public key"""
 
-    signature = str_sig_to_byes(signature)
+    signature = str_sig_to_bytes(signature)
     public_key = deserialize_str_key(public_key)
 
     try:
@@ -154,8 +153,13 @@ def validate_blockchain(blockchain: list) -> bool:
     return True
 
 
-def propagate_nodes():
-    pass
+def propagate_node(new_node: str):
+    for url in Node.objects.all().values_list("url", flat=True):
+        try:
+            r = requests.post(url, data={"url": new_node})
+            print(r.text)
+        except requests.exceptions.ConnectionError:
+            print("Could not reach node at " + url + " to share new node")
 
 
 def download_blockchains() -> list:

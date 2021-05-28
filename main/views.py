@@ -1,5 +1,4 @@
-from urllib.parse import urlparse
-
+import requests
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import generics
@@ -11,6 +10,7 @@ from .blockchain import (
     proof_of_work,
     sign_transaction,
     SignatureError,
+    propagate_node,
 )
 from .crypto import (
     read_private_key,
@@ -41,9 +41,16 @@ class Transactions(generics.ListCreateAPIView):
 
 @api_view(["POST"])
 def register_node(request):
-    address = request
-    # TODO get url to register from request headers
-    Node.objects.create(url=urlparse(address).netloc)
+    address = request.POST.get("url")
+    # url = urlparse(address).netloc
+
+    # reject already registered node
+    if address not in Node.objects.all().values_list("url", flat=True):
+        Node.objects.create(url=address)
+        propagate_node(address)
+    else:
+        return JsonResponse("Node already registered at " + address, safe=False)
+
     return JsonResponse("Registered node at " + address, safe=False)
 
 
@@ -55,11 +62,15 @@ def mine(request):
         last_proof = last_block.proof
         proof = proof_of_work(last_proof)
 
+        # signature for new block
         signature = sign_transaction(
-            key_to_str(NODE_PUBLIC_KEY), key_to_str(NODE_PUBLIC_KEY), 1, NODE_PRIVATE_KEY,
+            sender_public_key=key_to_str(NODE_PUBLIC_KEY),
+            recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
+            amount=1,
+            private_key=NODE_PRIVATE_KEY,
         )
 
-        # Reward
+        # reward to self for forging new block
         create_new_transaction(
             sender_name="Gelt",
             sender_public_key=key_to_str(NODE_PUBLIC_KEY),

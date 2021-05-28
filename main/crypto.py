@@ -78,7 +78,7 @@ def bytes_sig_to_str(sig):
     return repr(sig[:])
 
 
-def str_sig_to_byes(sig):
+def str_sig_to_bytes(sig):
     return encode(sig.encode().decode("unicode_escape")[2:-1], "raw_unicode_escape")
 
 
