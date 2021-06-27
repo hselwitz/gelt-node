@@ -21,7 +21,8 @@ def generate_key_pair():
 
     public_key = private_key.public_key()
     pem_public = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     with open(r"main/public_key.pem", "wb") as f:
         f.write(pem_public)
@@ -43,7 +44,8 @@ def read_private_key():
 
 def serialize_public_key(key):
     return key.public_bytes(
-        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
 
@@ -59,7 +61,8 @@ def deserialize_str_key(key: str):
 
     reconstructed_key = start + key + end
     reconstructed_key = encode(
-        reconstructed_key.encode().decode("unicode_escape"), "raw_unicode_escape",
+        reconstructed_key.encode().decode("unicode_escape"),
+        "raw_unicode_escape",
     )
 
     parameters = load_pem_public_key(reconstructed_key)
@@ -86,7 +89,10 @@ def sign(private_key, message: dict):
     message = json.dumps(message).encode("utf-8")
     signature = private_key.sign(
         message,
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH,),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH,
+        ),
         hashes.SHA256(),
     )
 
@@ -98,7 +104,10 @@ def verify(public_key, signature: str, message: dict):
     verified = public_key.verify(
         signature,
         message,
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH,),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH,
+        ),
         hashes.SHA256(),
     )
 

@@ -8,7 +8,7 @@ class Block(models.Model):
     proof = models.IntegerField()
     previous_hash = models.CharField(max_length=255)
 
-    def __str__(self):
+    def __repr__(self):
         return str(self.proof)
 
     @staticmethod
@@ -30,7 +30,7 @@ class Transaction(models.Model):
     signature = models.CharField(max_length=255)
     validated = models.BooleanField(default=False)
 
-    def __str__(self):
+    def __repr__(self):
         return self.signature
 
     @staticmethod
@@ -46,7 +46,7 @@ class Node(models.Model):
     url = models.CharField(max_length=255)
     date_registered = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __repr__(self):
         return str(self.url)
 
     @staticmethod

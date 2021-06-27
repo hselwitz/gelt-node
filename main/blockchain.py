@@ -24,7 +24,7 @@ class BlockchainError(Exception):
 
 
 def create_hash(*args: dict) -> str:
-    """function to hash transaction data"""
+    """hashes transaction data"""
 
     item_string = ""
     for i in args:
@@ -115,6 +115,8 @@ def validate_transaction(public_key: str, signature: str, message: dict):
 
 
 def proof_of_work(last_proof: int) -> int:
+    """mining function to find valid proof"""
+
     proof = 0
     while validate_proof(last_proof, proof) is False:
         proof += 1
@@ -154,10 +156,11 @@ def validate_blockchain(blockchain: list) -> bool:
 
 
 def propagate_node(new_node: str):
-    for url in Node.objects.all().values_list("url", flat=True):
+    for url in list(Node.objects.all().values_list("url", flat=True))[:-1]:
         try:
-            r = requests.post(url, data={"url": new_node})
+            r = requests.post(url + r"/registernodenoprop/", data={url: new_node})
             print(r.text)
+            print(url + r"/registernodenoprop/")
         except requests.exceptions.ConnectionError:
             print("Could not reach node at " + url + " to share new node")
 

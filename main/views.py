@@ -1,4 +1,3 @@
-import requests
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import generics
@@ -39,19 +38,28 @@ class Transactions(generics.ListCreateAPIView):
     serializer_class = TransactionSerializer
 
 
-@api_view(["POST"])
-def register_node(request):
-    address = request.POST.get("url")
-    # url = urlparse(address).netloc
+def register_node(request, propagate):
+    node_address = next(request.POST.values())
 
-    # reject already registered node
-    if address not in Node.objects.all().values_list("url", flat=True):
-        Node.objects.create(url=address)
-        propagate_node(address)
+    # reject previously registered nodes
+    if node_address not in Node.objects.all().values_list("url", flat=True):
+        Node.objects.create(url=node_address)
+        if propagate:
+            propagate_node(node_address)
     else:
-        return JsonResponse("Node already registered at " + address, safe=False)
+        return JsonResponse("Node already registered at " + node_address, safe=False)
 
-    return JsonResponse("Registered node at " + address, safe=False)
+    return JsonResponse("Registered node at " + node_address, safe=False)
+
+
+@api_view(["POST"])
+def register_node_no_propagate(request):
+    return register_node(request, False)
+
+
+@api_view(["POST"])
+def register_node_propagate(request):
+    return register_node(request, True)
 
 
 @api_view(["POST"])
