@@ -37,6 +37,7 @@ def create_hash(*args: dict) -> str:
 
 def create_new_block(proof: int) -> Block:
     last_block = model_to_dict(Block.get_last_block())
+    last_block.pop("id", None)
     previous_hash = create_hash(last_block)
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
@@ -144,12 +145,19 @@ def export_blockchain() -> list:
 
 
 def validate_blockchain(blockchain: list) -> bool:
-    for b in range(0, len(blockchain) - 1):
-        # validate proofs
-        if not validate_proof(blockchain[b + 1]["proof"], blockchain[b]["proof"]):
-            raise BlockchainError("Invalid proof")
-        # validate hashes
-        if blockchain[b]["previous_hash"] != create_hash(blockchain[b + 1]):
+    # validate proofs
+    for block in range(0, len(blockchain) - 1):
+        if not validate_proof(blockchain[block]["proof"], blockchain[block + 1]["proof"]):
+            raise BlockchainError(
+                "Invalid proof", block, blockchain[block]["proof"], blockchain[block + 1]["proof"]
+            )
+
+    # validate hashes
+    for block in range(0, len(blockchain) - 2):
+        if (
+            create_hash(blockchain[block].pop("timestamp", None))
+            != blockchain[block + 1]["previous_hash"]
+        ):
             raise BlockchainError("Invalid hash")
 
     return True
@@ -169,8 +177,12 @@ def download_blockchains() -> list:
     blockchains = []
     nodes = Node.get_unique_nodes()
     for node in nodes:
-        r = requests.get(node + "/chain/")
-        blockchains.append(r)
+        try:
+            r = requests.get(node + "/chain/").json()
+        except requests.exceptions.ConnectionError:
+            print("Could not reach node at " + node + " to download its blockchain")
+        else:
+            blockchains.append(r)
 
     return blockchains
 
