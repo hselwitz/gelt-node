@@ -72,8 +72,6 @@ def create_new_transaction(
         "amount": int(amount),
     }
 
-    print(transaction_data)
-
     validate_transaction(sender_public_key, signature, transaction_data)
 
     new_transaction = Transaction.objects.create(
@@ -112,8 +110,6 @@ def validate_transaction(public_key: str, signature: str, message: dict):
     except cryptography.exceptions.InvalidSignature:
         raise SignatureError
 
-    # TODO: and is unique
-
 
 def proof_of_work(last_proof: int) -> int:
     """mining function to find valid proof"""
@@ -133,24 +129,11 @@ def validate_proof(last_proof: int, proof: int) -> bool:
     return guess_hash[:4] == "0000"
 
 
-def register_node(node_address: str, url_to_register: str) -> None:
-    headers = {"Referer": url_to_register}
-    requests.post(node_address, headers=headers)
-
-
-def export_blockchain() -> list:
-    bc = list(Block.chain().values())
-    bc = [{k: v for k, v in d.items() if k != "timestamp"} for d in bc]
-    return bc
-
-
 def validate_blockchain(blockchain: list) -> bool:
     # validate proofs
     for block in range(0, len(blockchain) - 1):
         if not validate_proof(blockchain[block]["proof"], blockchain[block + 1]["proof"]):
-            raise BlockchainError(
-                "Invalid proof", block, blockchain[block]["proof"], blockchain[block + 1]["proof"]
-            )
+            raise BlockchainError("Invalid proof")
 
     # validate hashes
     for block in range(0, len(blockchain) - 2):
@@ -166,11 +149,17 @@ def validate_blockchain(blockchain: list) -> bool:
 def propagate_node(new_node: str):
     for url in list(Node.objects.all().values_list("url", flat=True))[:-1]:
         try:
-            r = requests.post(url + r"/registernodenoprop/", data={url: new_node})
-            print(r.text)
-            print(url + r"/registernodenoprop/")
+            requests.post(url + r"/registernodenoprop/", data={url: new_node})
         except requests.exceptions.ConnectionError:
             print("Could not reach node at " + url + " to share new node")
+
+
+def broadcast_new_block():
+    for url in list(Node.objects.all().values_list("url", flat=True)):
+        try:
+            requests.post(url + r"/broadcastnewblock/")
+        except requests.exceptions.ConnectionError:
+            print("Could not reach node at " + url + " to broadcast new block")
 
 
 def download_blockchains() -> list:

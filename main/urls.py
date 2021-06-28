@@ -12,4 +12,5 @@ urlpatterns = [
     path(
         "registernodenoprop/", views.register_node_no_propagate, name="register_node_no_propagate"
     ),
+    path("broadcastnewblock/", views.broadcast_new_block, name="broadcast_new_block"),
 ]

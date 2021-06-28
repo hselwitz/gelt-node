@@ -4,12 +4,14 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 
 from .blockchain import (
+    broadcast_new_block,
     create_new_block,
     create_new_transaction,
     proof_of_work,
     sign_transaction,
     SignatureError,
     propagate_node,
+    resolve_conflicts,
 )
 from .crypto import (
     read_private_key,
@@ -63,6 +65,12 @@ def register_node_propagate(request):
 
 
 @api_view(["POST"])
+def broadcast_new_block(request):
+    resolve_conflicts()
+    return JsonResponse("Blockchains synced", safe=False)
+
+
+@api_view(["POST"])
 def mine(request):
     if request.method == "POST":
         # Get next proof
@@ -97,6 +105,8 @@ def mine(request):
             "proof": new_block.proof,
             "previous_hash": new_block.previous_hash,
         }
+
+        broadcast_new_block()
 
         return JsonResponse(response)
 
