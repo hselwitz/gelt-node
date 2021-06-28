@@ -174,6 +174,8 @@ def propagate_node(new_node: str):
 
 
 def download_blockchains() -> list:
+    """downloads all blockchains from known nodes"""
+
     blockchains = []
     nodes = Node.get_unique_nodes()
     for node in nodes:
@@ -188,7 +190,8 @@ def download_blockchains() -> list:
 
 
 def resolve_conflicts() -> None:
-    # loop through list of node's chain endpoints, validate, replace if longer than local chain
+    """validates the longest known node and if valid replaces local blockchain"""
+
     local_chain_length = Block.objects.count()
     blockchains = download_blockchains()
     longest_bc = max(blockchains, key=len)
@@ -198,8 +201,15 @@ def resolve_conflicts() -> None:
         try:
             validate_blockchain(longest_bc)
         except BlockchainError:
-            raise BlockchainError("Invalid blockchain on node _")
+            raise BlockchainError("Invalid blockchain on foreign node, please remove the node.")
 
         Block.objects.all().delete()
 
-        # TODO upload new blockchain to Block model
+        for block in longest_bc:
+            Block(
+                index=block["index"],
+                timestamp=block["timestamp"],
+                transactions=block["transactions"],
+                proof=block["proof"],
+                previous_hash=block["previous_hash"],
+            ).save()
