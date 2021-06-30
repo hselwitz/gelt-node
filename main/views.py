@@ -31,12 +31,12 @@ def index(request):
 
 
 class Chain(generics.ListCreateAPIView):
-    queryset = Block.objects.all()
+    queryset = reversed(Block.objects.all())
     serializer_class = ChainSerializer
 
 
 class Transactions(generics.ListCreateAPIView):
-    queryset = Transaction.objects.all()
+    queryset = reversed(Transaction.objects.all())
     serializer_class = TransactionSerializer
 
 

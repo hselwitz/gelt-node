@@ -19,10 +19,10 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = [
-            "sender",
-            "recipient",
+            "sender_name",
+            "recipient_name",
             "timestamp",
             "amount",
-            "hash",
+            "signature",
             "validated",
         ]
