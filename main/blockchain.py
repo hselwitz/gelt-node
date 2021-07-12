@@ -36,15 +36,14 @@ def create_hash(*args: dict) -> str:
 
 
 def create_new_block(proof: int) -> Block:
+    """Creates new block and validates outstanding transactions"""
+
     last_block = model_to_dict(Block.get_last_block())
     last_block.pop("id", None)
     previous_hash = create_hash(last_block)
 
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
-
-    transactions_to_validate = []
-    for t in unvalidated_transactions:
-        transactions_to_validate.append(t[0])
+    transactions_to_validate = [t[0] for t in unvalidated_transactions]
 
     block = Block.objects.create(
         index=last_block["index"] + 1,

@@ -77,6 +77,7 @@ def mine(request):
         last_block = Block.get_last_block()
         last_proof = last_block.proof
         proof = proof_of_work(last_proof)
+        #TODO hash last_proof with unvalidated transcations
 
         # signature for new block
         signature = sign_transaction(

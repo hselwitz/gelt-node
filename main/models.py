@@ -9,15 +9,15 @@ class Block(models.Model):
     previous_hash = models.CharField(max_length=255)
 
     def __repr__(self):
-        return str(self.proof)
+        return str("Block #" + str(self.index))
 
-    @staticmethod
-    def chain():
-        return Block.objects.all().order_by("-id")
+    @classmethod
+    def chain(cls):
+        return cls.objects.all().order_by("-id")
 
-    @staticmethod
-    def get_last_block():
-        return Block.objects.all().order_by("-id")[0]
+    @classmethod
+    def get_last_block(cls):
+        return cls.objects.all().order_by("-id")[0]
 
 
 class Transaction(models.Model):
@@ -31,15 +31,23 @@ class Transaction(models.Model):
     validated = models.BooleanField(default=False)
 
     def __repr__(self):
-        return self.signature
+        return (
+            str(self.amount)
+            + " Gelt from "
+            + self.sender_name
+            + " to "
+            + self.recipient_name
+            + " on "
+            + str(self.timestamp)
+        )
 
-    @staticmethod
-    def get_last_transaction():
-        return Transaction.objects.all().order_by("-id")[0]
+    @classmethod
+    def get_last_transaction(cls):
+        return cls.objects.all().order_by("-id")[0]
 
-    @staticmethod
-    def get_unvalidated_transactions():
-        return Transaction.objects.filter(validated=False).values_list("signature")
+    @classmethod
+    def get_unvalidated_transactions(cls):
+        return cls.objects.filter(validated=False).values_list("signature")
 
 
 class Node(models.Model):
@@ -49,8 +57,8 @@ class Node(models.Model):
     def __repr__(self):
         return str(self.url)
 
-    @staticmethod
-    def get_unique_nodes() -> list:
+    @classmethod
+    def get_unique_nodes(cls) -> list:
         nodes = []
-        [nodes.append(node.url) for node in Node.objects.all() if node not in nodes]
+        [nodes.append(node.url) for node in cls.objects.all() if node not in nodes]
         return nodes
