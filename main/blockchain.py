@@ -1,11 +1,12 @@
 import hashlib
 import json
+from copy import deepcopy
 
 import cryptography
 import requests
 from django.forms.models import model_to_dict
 
-from main.crypto import (
+from .crypto import (
     verify,
     str_sig_to_bytes,
     deserialize_str_key,
@@ -24,8 +25,7 @@ class BlockchainError(Exception):
 
 
 def create_hash(*args: dict) -> str:
-    """hashes transaction data"""
-
+    """Hash transaction data."""
     item_string = ""
     for i in args:
         item_string += json.dumps(i, sort_keys=True)
@@ -35,18 +35,18 @@ def create_hash(*args: dict) -> str:
     return hashlib.sha256(item_string).hexdigest()
 
 
-def hash_last_block():
+def hash_last_block() -> str:
+    """Hash most recent block."""
     last_block = model_to_dict(Block.get_last_block())
-    last_block.pop("id", None)
+    last_block.pop("id")
     previous_hash = create_hash(last_block)
 
     return previous_hash
 
 
 def create_new_block(proof: int) -> Block:
-    """Creates new block and validates outstanding transactions"""
+    """Create new block and validate outstanding transactions."""
     previous_hash = hash_last_block()
-
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
     transactions_to_validate = list(
         unvalidated_transactions.values("sender_name", "recipient_name", "timestamp", "amount")
@@ -72,6 +72,7 @@ def create_new_transaction(
     amount: int,
     signature: str,
 ) -> Transaction:
+    """Validate transaction data and post to transaction database."""
     transaction_data = {
         "sender_public_key": sender_public_key,
         "recipient_public_key": recipient_public_key,
@@ -95,6 +96,7 @@ def create_new_transaction(
 def sign_transaction(
     sender_public_key: str, recipient_public_key: str, amount: int, private_key
 ) -> str:
+    """Sign transaction with private key."""
     transaction_data = {
         "sender_public_key": sender_public_key,
         "recipient_public_key": recipient_public_key,
@@ -106,8 +108,7 @@ def sign_transaction(
 
 
 def validate_transaction(public_key: str, signature: str, message: dict):
-    """verify signature with public key"""
-
+    """Verify signature with public key."""
     signature = str_sig_to_bytes(signature)
     public_key = deserialize_str_key(public_key)
 
@@ -118,8 +119,7 @@ def validate_transaction(public_key: str, signature: str, message: dict):
 
 
 def proof_of_work(previous_hash: str) -> int:
-    """mining function to find valid proof"""
-
+    """Find valid proof with mining function."""
     proof = 0
     while validate_proof(previous_hash, proof) is False:
         proof += 1
@@ -128,33 +128,32 @@ def proof_of_work(previous_hash: str) -> int:
 
 
 def validate_proof(previous_hash: str, proof: int) -> bool:
-    """Validates the proof, hash must contain four leading zeros"""
-
+    """Validate the proof if hash contains four leading zeros."""
     guess = f"{previous_hash}{proof}".encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
     return guess_hash[:4] == "0000"
 
 
 def validate_blockchain(blockchain: list) -> bool:
-    blockchain = list(reversed(blockchain))
+    """Confirm if all proofs and hashes are valid for a given blockchain."""
+    blockchain = deepcopy(list(reversed(blockchain)))
 
     # validate proofs
-    for block in range(1, len(blockchain)):
+    for block in range(1, len(blockchain) - 1):
         if not validate_proof(blockchain[block]["previous_hash"], blockchain[block]["proof"]):
             raise BlockchainError("Invalid proof")
 
     # validate hashes
-    for block in range(0, len(blockchain) - 2):
-        if (
-            create_hash(blockchain[block].pop("timestamp", None))
-            != blockchain[block + 1]["previous_hash"]
-        ):
+    for block in range(0, len(blockchain) - 1):
+        blockchain[block].pop("timestamp")
+        if create_hash(blockchain[block]) != blockchain[block + 1]["previous_hash"]:
             raise BlockchainError("Invalid hash")
 
     return True
 
 
 def propagate_node(new_node: str):
+    """Register a given node url with all known existing nodes."""
     for url in list(Node.objects.all().values_list("url", flat=True))[:-1]:
         try:
             requests.post(url + r"/registernodenoprop/", data={url: new_node})
@@ -162,7 +161,9 @@ def propagate_node(new_node: str):
             print("Could not reach node at " + url + " to share new node")
 
 
-def broadcast_new_block():
+def broadcast_new_block() -> None:
+    """Alert all known nodes of a new block. Other nodes will download the blockchain, validate,
+    and replace their version if needed."""
     for url in list(Node.objects.all().values_list("url", flat=True)):
         try:
             requests.post(url + r"/broadcastnewblock/")
@@ -171,8 +172,7 @@ def broadcast_new_block():
 
 
 def download_blockchains() -> list:
-    """downloads all blockchains from known nodes"""
-
+    """Download all blockchains from known nodes."""
     blockchains = []
     nodes = Node.get_unique_nodes()
     for node in nodes:
@@ -187,8 +187,7 @@ def download_blockchains() -> list:
 
 
 def resolve_conflicts() -> None:
-    """validates the longest known node and if valid replaces local blockchain"""
-
+    """Validate the longest known node and if valid replace local blockchain."""
     local_chain_length = Block.objects.count()
     blockchains = download_blockchains()
     longest_bc = max(blockchains, key=len)

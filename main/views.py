@@ -4,7 +4,6 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 
 from .blockchain import (
-    broadcast_new_block,
     create_new_block,
     create_new_transaction,
     hash_last_block,
@@ -32,16 +31,21 @@ def index(request):
 
 
 class Chain(generics.ListAPIView):
+    """Provide blockchain view."""
+
     queryset = Block.chain()
     serializer_class = ChainSerializer
 
 
 class Transactions(generics.ListAPIView):
+    """Provide transactions view."""
+
     queryset = reversed(Transaction.objects.all())
     serializer_class = TransactionSerializer
 
 
 def register_node(request, propagate: bool):
+    """Register new node locally and optionally share with with all known nodes."""
     node_address = next(request.POST.values())
 
     # reject previously registered nodes
@@ -57,22 +61,26 @@ def register_node(request, propagate: bool):
 
 @api_view(["POST"])
 def register_node_no_propagate(request):
+    """Register node locally without sharing with other nodes"""
     return register_node(request, False)
 
 
 @api_view(["POST"])
 def register_node_propagate(request):
+    """Register node locally and share with other nodes"""
     return register_node(request, True)
 
 
 @api_view(["POST"])
 def broadcast_new_block(request):
+    """Prompt nodes to download new block data"""
     resolve_conflicts()
     return JsonResponse("Blockchains synced", safe=False)
 
 
 @api_view(["POST"])
 def mine(request):
+    """Mine for next block."""
     # Get next proof
     previous_hash = hash_last_block()
     proof = proof_of_work(previous_hash)
@@ -113,6 +121,7 @@ def mine(request):
 
 @api_view(["POST"])
 def new_transaction(request):
+    """Post new transaction to node."""
     values = request.POST
 
     required = [
