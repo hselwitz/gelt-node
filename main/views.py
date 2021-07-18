@@ -7,16 +7,17 @@ from .blockchain import (
     broadcast_new_block,
     create_new_block,
     create_new_transaction,
+    hash_last_block,
     proof_of_work,
-    sign_transaction,
-    SignatureError,
     propagate_node,
     resolve_conflicts,
+    sign_transaction,
+    SignatureError,
 )
 from .crypto import (
+    key_to_str,
     read_private_key,
     read_public_key,
-    key_to_str,
 )
 from .models import Block, Transaction, Node
 from .serializers import ChainSerializer, TransactionSerializer
@@ -31,7 +32,7 @@ def index(request):
 
 
 class Chain(generics.ListAPIView):
-    queryset = reversed(Block.objects.all())
+    queryset = Block.chain()
     serializer_class = ChainSerializer
 
 
@@ -40,7 +41,7 @@ class Transactions(generics.ListAPIView):
     serializer_class = TransactionSerializer
 
 
-def register_node(request, propagate):
+def register_node(request, propagate: bool):
     node_address = next(request.POST.values())
 
     # reject previously registered nodes
@@ -72,44 +73,42 @@ def broadcast_new_block(request):
 
 @api_view(["POST"])
 def mine(request):
-    if request.method == "POST":
-        # Get next proof
-        last_block = Block.get_last_block()
-        last_proof = last_block.proof
-        proof = proof_of_work(last_proof)
-        #TODO hash last_proof with unvalidated transcations
+    # Get next proof
+    previous_hash = hash_last_block()
+    proof = proof_of_work(previous_hash)
 
-        # signature for new block
-        signature = sign_transaction(
-            sender_public_key=key_to_str(NODE_PUBLIC_KEY),
-            recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
-            amount=1,
-            private_key=NODE_PRIVATE_KEY,
-        )
+    # signature for new block
+    signature = sign_transaction(
+        sender_public_key=key_to_str(NODE_PUBLIC_KEY),
+        recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
+        amount=1,
+        private_key=NODE_PRIVATE_KEY,
+    )
 
-        # reward to self for forging new block
-        create_new_transaction(
-            sender_name="Gelt",
-            sender_public_key=key_to_str(NODE_PUBLIC_KEY),
-            recipient_name=NODE_NAME,
-            recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
-            amount=1,
-            signature=signature,
-        )
+    # reward to self for forging new block
+    create_new_transaction(
+        sender_name="Gelt",
+        sender_public_key=key_to_str(NODE_PUBLIC_KEY),
+        recipient_name=NODE_NAME,
+        recipient_public_key=key_to_str(NODE_PUBLIC_KEY),
+        amount=1,
+        signature=signature,
+    )
 
-        new_block = create_new_block(proof)
+    new_block = create_new_block(proof)
 
-        response = {
-            "message": "New block forged",
-            "index": new_block.index,
-            "transactions": new_block.transactions,
-            "proof": new_block.proof,
-            "previous_hash": new_block.previous_hash,
-        }
+    response = {
+        "message": "New block forged",
+        "index": new_block.index,
+        "transactions": new_block.transactions,
+        "proof": new_block.proof,
+        "previous_hash": new_block.previous_hash,
+    }
 
-        broadcast_new_block()
+    # share new block with all known nodes
+    resolve_conflicts()
 
-        return JsonResponse(response)
+    return JsonResponse(response)
 
 
 @api_view(["POST"])
@@ -124,7 +123,7 @@ def new_transaction(request):
         "amount",
         "signature",
     ]
-    if not all(k in values for k in required):
+    if not all(value in values for value in required):
         return JsonResponse("Missing values", safe=False)
 
     try:

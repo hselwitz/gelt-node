@@ -35,18 +35,25 @@ def create_hash(*args: dict) -> str:
     return hashlib.sha256(item_string).hexdigest()
 
 
-def create_new_block(proof: int) -> Block:
-    """Creates new block and validates outstanding transactions"""
-
+def hash_last_block():
     last_block = model_to_dict(Block.get_last_block())
     last_block.pop("id", None)
     previous_hash = create_hash(last_block)
 
+    return previous_hash
+
+
+def create_new_block(proof: int) -> Block:
+    """Creates new block and validates outstanding transactions"""
+    previous_hash = hash_last_block()
+
     unvalidated_transactions = Transaction.get_unvalidated_transactions()
-    transactions_to_validate = [t[0] for t in unvalidated_transactions]
+    transactions_to_validate = list(
+        unvalidated_transactions.values("sender_name", "recipient_name", "timestamp", "amount")
+    )
 
     block = Block.objects.create(
-        index=last_block["index"] + 1,
+        index=Block.get_last_block().index + 1,
         transactions=transactions_to_validate,
         proof=proof,
         previous_hash=previous_hash,
@@ -110,28 +117,30 @@ def validate_transaction(public_key: str, signature: str, message: dict):
         raise SignatureError
 
 
-def proof_of_work(last_proof: int) -> int:
+def proof_of_work(previous_hash: str) -> int:
     """mining function to find valid proof"""
 
     proof = 0
-    while validate_proof(last_proof, proof) is False:
+    while validate_proof(previous_hash, proof) is False:
         proof += 1
 
     return proof
 
 
-def validate_proof(last_proof: int, proof: int) -> bool:
+def validate_proof(previous_hash: str, proof: int) -> bool:
     """Validates the proof, hash must contain four leading zeros"""
 
-    guess = f"{last_proof}{proof}".encode()
+    guess = f"{previous_hash}{proof}".encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
     return guess_hash[:4] == "0000"
 
 
 def validate_blockchain(blockchain: list) -> bool:
+    blockchain = list(reversed(blockchain))
+
     # validate proofs
-    for block in range(0, len(blockchain) - 1):
-        if not validate_proof(blockchain[block]["proof"], blockchain[block + 1]["proof"]):
+    for block in range(1, len(blockchain)):
+        if not validate_proof(blockchain[block]["previous_hash"], blockchain[block]["proof"]):
             raise BlockchainError("Invalid proof")
 
     # validate hashes
@@ -168,7 +177,7 @@ def download_blockchains() -> list:
     nodes = Node.get_unique_nodes()
     for node in nodes:
         try:
-            r = requests.get(node + "/chain/").json()
+            r = requests.get(node + "/blockchain/").json()
         except requests.exceptions.ConnectionError:
             print("Could not reach node at " + node + " to download its blockchain")
         else:
@@ -194,10 +203,10 @@ def resolve_conflicts() -> None:
         Block.objects.all().delete()
 
         for block in longest_bc:
-            Block(
+            Block.objects.create(
                 index=block["index"],
                 timestamp=block["timestamp"],
                 transactions=block["transactions"],
                 proof=block["proof"],
                 previous_hash=block["previous_hash"],
-            ).save()
+            )

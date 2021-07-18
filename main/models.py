@@ -47,7 +47,7 @@ class Transaction(models.Model):
 
     @classmethod
     def get_unvalidated_transactions(cls):
-        return cls.objects.filter(validated=False).values_list("signature")
+        return cls.objects.filter(validated=False)
 
 
 class Node(models.Model):
