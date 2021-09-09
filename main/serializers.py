@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Block, Transaction
+from main.models import Block, Transaction
 
 
 class ChainSerializer(serializers.ModelSerializer):

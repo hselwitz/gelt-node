@@ -6,14 +6,14 @@ import cryptography
 import requests
 from django.forms.models import model_to_dict
 
-from .crypto import (
+from main.crypto import (
     verify,
     str_sig_to_bytes,
     deserialize_str_key,
     bytes_sig_to_str,
     sign,
 )
-from .models import Block, Transaction, Node
+from main.models import Block, Transaction, Node
 
 
 class SignatureError(Exception):
@@ -37,7 +37,7 @@ def create_hash(*args: dict) -> str:
 
 def hash_last_block() -> str:
     """Hash most recent block."""
-    last_block = model_to_dict(Block.get_last_block())
+    last_block = model_to_dict(Block.last_block())
     last_block.pop("id")
     previous_hash = create_hash(last_block)
 
@@ -47,13 +47,13 @@ def hash_last_block() -> str:
 def create_new_block(proof: int) -> Block:
     """Create new block and validate outstanding transactions."""
     previous_hash = hash_last_block()
-    unvalidated_transactions = Transaction.get_unvalidated_transactions()
+    unvalidated_transactions = Transaction.unvalidated_transactions()
     transactions_to_validate = list(
         unvalidated_transactions.values("sender_name", "recipient_name", "timestamp", "amount")
     )
 
     block = Block.objects.create(
-        index=Block.get_last_block().index + 1,
+        index=Block.last_block().index + 1,
         transactions=transactions_to_validate,
         proof=proof,
         previous_hash=previous_hash,
@@ -174,7 +174,7 @@ def broadcast_new_block() -> None:
 def download_blockchains() -> list:
     """Download all blockchains from known nodes."""
     blockchains = []
-    nodes = Node.get_unique_nodes()
+    nodes = Node.unique_nodes()
     for node in nodes:
         try:
             r = requests.get(node + "/blockchain/").json()

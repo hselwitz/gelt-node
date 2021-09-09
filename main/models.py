@@ -16,7 +16,7 @@ class Block(models.Model):
         return cls.objects.all().order_by("-id")
 
     @classmethod
-    def get_last_block(cls):
+    def last_block(cls):
         return cls.objects.all().order_by("-id")[0]
 
 
@@ -42,11 +42,7 @@ class Transaction(models.Model):
         )
 
     @classmethod
-    def get_last_transaction(cls):
-        return cls.objects.all().order_by("-id")[0]
-
-    @classmethod
-    def get_unvalidated_transactions(cls):
+    def unvalidated_transactions(cls):
         return cls.objects.filter(validated=False)
 
 
@@ -58,7 +54,7 @@ class Node(models.Model):
         return str(self.url)
 
     @classmethod
-    def get_unique_nodes(cls) -> list:
-        nodes = []
-        [nodes.append(node.url) for node in cls.objects.all() if node not in nodes]
+    def unique_nodes(cls) -> list:
+        nodes = list(set([node.url for node in cls.objects.all()]))
+
         return nodes

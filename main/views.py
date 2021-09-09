@@ -1,9 +1,11 @@
+import os
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.decorators import api_view
 
-from .blockchain import (
+from main.blockchain import (
     create_new_block,
     create_new_transaction,
     hash_last_block,
@@ -13,16 +15,21 @@ from .blockchain import (
     sign_transaction,
     SignatureError,
 )
-from .crypto import (
+from main.crypto import (
+    generate_key_pair,
     key_to_str,
     read_private_key,
     read_public_key,
 )
-from .models import Block, Transaction, Node
-from .serializers import ChainSerializer, TransactionSerializer
+from main.models import Block, Transaction, Node
+from main.serializers import ChainSerializer, TransactionSerializer
+
+if not (os.path.isfile(r"main/private_key.pem") and os.path.isfile(r"main/public_key.pem")):
+    generate_key_pair()
 
 NODE_PUBLIC_KEY = read_public_key()
 NODE_PRIVATE_KEY = read_private_key()
+
 NODE_NAME = "H"
 
 
@@ -32,14 +39,12 @@ def index(request):
 
 class Chain(generics.ListAPIView):
     """Provide blockchain view."""
-
     queryset = Block.chain()
     serializer_class = ChainSerializer
 
 
 class Transactions(generics.ListAPIView):
     """Provide transactions view."""
-
     queryset = reversed(Transaction.objects.all())
     serializer_class = TransactionSerializer
 
@@ -147,7 +152,7 @@ def new_transaction(request):
     except SignatureError:
         return JsonResponse("Invalid signature detected. Transaction denied.", safe=False)
 
-    new_index = Block.get_last_block().index + 1
+    new_index = Block.last_block().index + 1
     response = {"message": f"Transaction will be added to Block {new_index}"}
 
     return JsonResponse(response)
